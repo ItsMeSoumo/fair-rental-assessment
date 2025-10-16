@@ -16,6 +16,8 @@ export default function EditForm({ reservation }) {
   const [previewUrl, setPreviewUrl] = useState(null);
   const [video, setVideo] = useState(null);
   const [videoPreviewUrl, setVideoPreviewUrl] = useState(null);
+  const [persistedImageUrl, setPersistedImageUrl] = useState(reservation?.image_url || null);
+  const [persistedVideoUrl, setPersistedVideoUrl] = useState(reservation?.video_url || null);
   const imageInputRef = useRef(null);
   const videoInputRef = useRef(null);
   const [imageInputKey, setImageInputKey] = useState(0);
@@ -101,6 +103,9 @@ export default function EditForm({ reservation }) {
         phone: data?.reservation?.contact_no || prev.phone,
         comments: data?.reservation?.comments || prev.comments,
       }));
+      // Update persisted URLs from server response so previews reflect the latest saved files
+      if (data?.reservation?.image_url) setPersistedImageUrl(data.reservation.image_url);
+      if (data?.reservation?.video_url) setPersistedVideoUrl(data.reservation.video_url);
       setImage(null);
       setVideo(null);
       if (imageInputRef.current) imageInputRef.current.value = "";
@@ -115,8 +120,8 @@ export default function EditForm({ reservation }) {
   }
 
   // Use existing URLs when no new file is selected
-  const currentImageSrc = previewUrl || reservation?.image_url || null;
-  const currentVideoSrc = videoPreviewUrl || reservation?.video_url || null;
+  const currentImageSrc = previewUrl || persistedImageUrl || null;
+  const currentVideoSrc = videoPreviewUrl || persistedVideoUrl || null;
   const isCurrentImagePdf = !previewUrl && typeof currentImageSrc === "string" && currentImageSrc.toLowerCase().includes(".pdf");
 
   return (
