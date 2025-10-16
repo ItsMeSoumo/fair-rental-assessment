@@ -138,22 +138,30 @@ export default function ReservationListPage() {
                         {r.created_at ? new Date(r.created_at).toLocaleDateString() : "-"}
                       </td>
                       <td className="px-6 py-4 text-center">
-                        <button
-                          onClick={() => deleteReservation(r._id, r.name)}
-                          disabled={deleting === r._id}
-                          className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-full hover:bg-red-100 hover:border-red-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-                        >
-                          {deleting === r._id ? (
-                            <>
-                              <div className="animate-spin w-3 h-3 border border-red-400 border-t-transparent rounded-full mr-1"></div>
-                              Deleting...
-                            </>
-                          ) : (
-                            <>
-                              🗑️ Delete
-                            </>
-                          )}
-                        </button>
+                        <div className="flex items-center justify-center gap-2">
+                          <Link
+                            href={`/edit/${r._id}`}
+                            className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-full hover:bg-slate-50 hover:border-slate-300 transition-all duration-200"
+                          >
+                            ✏️ Edit
+                          </Link>
+                          <button
+                            onClick={() => deleteReservation(r._id, r.name)}
+                            disabled={deleting === r._id}
+                            className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-full hover:bg-red-100 hover:border-red-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                          >
+                            {deleting === r._id ? (
+                              <>
+                                <div className="animate-spin w-3 h-3 border border-red-400 border-t-transparent rounded-full mr-1"></div>
+                                Deleting...
+                              </>
+                            ) : (
+                              <>
+                                🗑️ Delete
+                              </>
+                            )}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
