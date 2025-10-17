@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import axios from "axios";
 
 export default function EditForm({ reservation }) {
   const [form, setForm] = useState({
@@ -47,6 +48,8 @@ export default function EditForm({ reservation }) {
     return () => URL.revokeObjectURL(url);
   }, [video]);
 
+  // No fetching here; EditLoader handles data fetch and passes reservation as prop
+
   function handleChange(e) {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
@@ -88,12 +91,9 @@ export default function EditForm({ reservation }) {
       if (image) fd.append("image", image);
       if (video) fd.append("video", video);
 
-      const res = await fetch(`/api/reservations/${reservation._id}`, {
-        method: "PUT",
-        body: fd,
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || "Failed to update");
+      const targetId = reservation && reservation._id;
+      const res = await axios.put(`/api/reservations/${targetId}`, fd);
+      const data = res?.data || {};
 
       setMessage("Reservation updated successfully.");
       setForm((prev) => ({
@@ -112,8 +112,10 @@ export default function EditForm({ reservation }) {
       if (videoInputRef.current) videoInputRef.current.value = "";
       setImageInputKey((k) => k + 1);
       setVideoInputKey((k) => k + 1);
-    } catch (err) {
-      setMessage(err?.message || "Update failed");
+    } catch (error) {
+      const errorMessage =
+        error?.response?.data?.error || error?.message || "Update failed";
+      setMessage(errorMessage);
     } finally {
       setSubmitting(false);
     }
@@ -123,6 +125,8 @@ export default function EditForm({ reservation }) {
   const currentImageSrc = previewUrl || persistedImageUrl || null;
   const currentVideoSrc = videoPreviewUrl || persistedVideoUrl || null;
   const isCurrentImagePdf = !previewUrl && typeof currentImageSrc === "string" && currentImageSrc.toLowerCase().includes(".pdf");
+
+  // This component assumes a valid `reservation` prop.
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100">

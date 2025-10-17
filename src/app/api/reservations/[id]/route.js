@@ -7,7 +7,8 @@ import { UploadImage } from "@/lib/uploadImage";
 export async function GET(_req, { params }) {
   try {
     await connectDB();
-    const doc = await Reservation.findById(params.id).lean();
+    const { id } = await params;
+    const doc = await Reservation.findById(id).lean();
     if (!doc) return NextResponse.json({ error: "Not found" }, { status: 404 });
     // Return a consistent shape like other endpoints
     return NextResponse.json({ reservation: doc }, { status: 200 });
@@ -20,6 +21,7 @@ export async function GET(_req, { params }) {
 export async function PUT(request, { params }) {
   try {
     await connectDB();
+    const { id } = await params;
     const update = {};
 
     // Try to parse multipart form first; fallback to JSON
@@ -33,7 +35,7 @@ export async function PUT(request, { params }) {
     }
 
     if (isForm) {
-      console.log("[API PUT] multipart form received for", params.id);
+      console.log("[API PUT] multipart form received for", id);
       update.reservation_no = form.get("reservation_no") || "";
       update.name = form.get("name") || "";
       update.contact_no = form.get("contact_no") || "";
@@ -59,16 +61,16 @@ export async function PUT(request, { params }) {
       }
     } else {
       const body = await request.json().catch(() => ({}));
-      console.log("[API PUT] JSON body received for", params.id, Object.keys(body));
+      console.log("[API PUT] JSON body received for", id, Object.keys(body));
       if (Object.prototype.hasOwnProperty.call(body, "reservation_no")) update.reservation_no = body.reservation_no || "";
       if (Object.prototype.hasOwnProperty.call(body, "name")) update.name = body.name || "";
       if (Object.prototype.hasOwnProperty.call(body, "contact_no")) update.contact_no = body.contact_no || "";
       if (Object.prototype.hasOwnProperty.call(body, "comments")) update.comments = body.comments || "";
     }
 
-    const doc = await Reservation.findByIdAndUpdate(params.id, update, { new: true });
+    const doc = await Reservation.findByIdAndUpdate(id, update, { new: true });
     if (!doc) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    console.log("[API PUT] updated doc", params.id, {
+    console.log("[API PUT] updated doc", id, {
       image_url: doc.image_url,
       video_url: doc.video_url,
     });
@@ -83,7 +85,8 @@ export async function PUT(request, { params }) {
 export async function DELETE(_req, { params }) {
   try {
     await connectDB();
-    const doc = await Reservation.findByIdAndDelete(params.id);
+    const { id } = await params;
+    const doc = await Reservation.findByIdAndDelete(id);
     if (!doc) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (err) {
