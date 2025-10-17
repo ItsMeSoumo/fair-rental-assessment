@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import axios from "axios";
+import LocationSelector from "@/components/location";
 
 export default function EditLoader({ id }) {
   const [reservation, setReservation] = useState(null);
@@ -21,6 +22,7 @@ export default function EditLoader({ id }) {
   const [videoInputKey, setVideoInputKey] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
+  const [locationStr, setLocationStr] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -54,6 +56,12 @@ export default function EditLoader({ id }) {
     });
     setPersistedImageUrl(reservation?.image_url || null);
     setPersistedVideoUrl(reservation?.video_url || null);
+    const loc = reservation?.location;
+    if (!loc) setLocationStr("");
+    else if (typeof loc === "string") setLocationStr(loc);
+    else {
+      try { setLocationStr(JSON.stringify(loc)); } catch { setLocationStr(""); }
+    }
   }, [reservation]);
 
   useEffect(() => {
@@ -116,6 +124,7 @@ export default function EditLoader({ id }) {
       fd.append("allChannel", String(form.channel === "all"));
       fd.append("sms", String(form.channel === "sms"));
       fd.append("whatsapp", String(form.channel === "whatsapp"));
+      fd.append("location", locationStr || "");
       if (image) fd.append("image", image);
       if (video) fd.append("video", video);
 
@@ -132,6 +141,9 @@ export default function EditLoader({ id }) {
       }));
       if (data?.reservation?.image_url) setPersistedImageUrl(data.reservation.image_url);
       if (data?.reservation?.video_url) setPersistedVideoUrl(data.reservation.video_url);
+      if (Object.prototype.hasOwnProperty.call(data?.reservation || {}, "location")) {
+        setLocationStr(data.reservation.location || "");
+      }
       setImage(null);
       setVideo(null);
       if (imageInputRef.current) imageInputRef.current.value = "";
@@ -222,6 +234,11 @@ export default function EditLoader({ id }) {
                 className="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-800 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-100 transition-all duration-200"
               />
               <p className="text-xs text-slate-500">Country code optional for now.</p>
+            </div>
+
+            <div className="space-y-3 md:col-span-2">
+              <label className="text-sm font-semibold text-slate-700 tracking-wide">Location (Start/End)</label>
+              <LocationSelector value={locationStr} onChange={setLocationStr} />
             </div>
 
             <div className="space-y-3">

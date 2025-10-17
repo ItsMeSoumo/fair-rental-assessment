@@ -3,6 +3,10 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import axios from "axios";
+import dynamic from "next/dynamic";
+import LocationSelector from "@/components/location";
+
+const Webcam = dynamic(() => import("react-webcam"), { ssr: false });
 
 export default function AddReservationPage() {
   const [form, setForm] = useState({
@@ -20,6 +24,12 @@ export default function AddReservationPage() {
   const videoInputRef = useRef(null);
   const [imageInputKey, setImageInputKey] = useState(0);
   const [videoInputKey, setVideoInputKey] = useState(0);
+  const [showCamera, setShowCamera] = useState(null);
+  const webcamRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const chunksRef = useRef([]);
+  const [capturing, setCapturing] = useState(false);
+  const [locationStr, setLocationStr] = useState("");
 
   useEffect(() => {
     if (!image) {
@@ -70,6 +80,59 @@ export default function AddReservationPage() {
     setVideoInputKey((k) => k + 1);
   }
 
+  function dataURLtoFile(dataurl, filename) {
+    const arr = dataurl.split(",");
+    const mime = arr[0].match(/:(.*?);/)[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) u8arr[n] = bstr.charCodeAt(n);
+    return new File([u8arr], filename, { type: mime });
+  }
+
+  function closeCamera() {
+    try {
+      if (capturing && mediaRecorderRef.current) mediaRecorderRef.current.stop();
+      const stream = webcamRef.current?.stream || webcamRef.current?.video?.srcObject;
+      stream?.getTracks()?.forEach((t) => t.stop());
+    } catch (_) {}
+    setCapturing(false);
+    setShowCamera(null);
+  }
+
+  function capturePhoto() {
+    const imgSrc = webcamRef.current?.getScreenshot({ width: 1280, height: 720 });
+    if (!imgSrc) return;
+    const file = dataURLtoFile(imgSrc, "webcam-photo.jpg");
+    setImage(file);
+    setShowCamera(null);
+  }
+
+  function startRecording() {
+    const stream = webcamRef.current?.stream || webcamRef.current?.video?.srcObject;
+    if (!stream) return;
+    chunksRef.current = [];
+    const mr = new MediaRecorder(stream, { mimeType: "video/webm" });
+    mediaRecorderRef.current = mr;
+    mr.ondataavailable = (e) => {
+      if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
+    };
+    mr.onstop = () => {
+      const blob = new Blob(chunksRef.current, { type: "video/webm" });
+      const file = new File([blob], "webcam-video.webm", { type: "video/webm" });
+      setVideo(file);
+      setCapturing(false);
+      setShowCamera(null);
+      chunksRef.current = [];
+    };
+    mr.start();
+    setCapturing(true);
+  }
+
+  function stopRecording() {
+    if (mediaRecorderRef.current) mediaRecorderRef.current.stop();
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     setMessage("");
@@ -84,6 +147,7 @@ export default function AddReservationPage() {
       formData.append("allChannel", String(form.channel === "all"));
       formData.append("sms", String(form.channel === "sms"));
       formData.append("whatsapp", String(form.channel === "whatsapp"));
+      formData.append("location", locationStr || "");
       
       if (image) {
         formData.append("image", image);
@@ -191,7 +255,7 @@ export default function AddReservationPage() {
             </div>
 
             {/* Communication Channel */}
-            {/* <div className="space-y-4 md:col-span-2">
+            <div className="space-y-4 md:col-span-2">
               <span className="text-sm font-semibold text-slate-700 tracking-wide">Communication Channel</span>
               <div className="flex gap-6">
                 {["all", "sms", "whatsapp"].map((ch) => (
@@ -210,7 +274,12 @@ export default function AddReservationPage() {
                   </label>
                 ))}
               </div>
-            </div> */}
+            </div>
+
+            <div className="space-y-3 md:col-span-2">
+              <label className="text-sm font-semibold text-slate-700 tracking-wide">Location (Start/End)</label>
+              <LocationSelector value={locationStr} onChange={setLocationStr} />
+            </div>
 
             {/* File Upload (image) */}
             <div className="space-y-3">
@@ -226,6 +295,15 @@ export default function AddReservationPage() {
                 key={imageInputKey}
                 className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm file:mr-4 file:rounded-lg file:border-0 file:bg-slate-50 file:px-4 file:py-2 file:text-slate-700 hover:border-slate-300 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-100 transition-all duration-200"
               />
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowCamera(showCamera === "photo" ? null : "photo")}
+                  className="inline-flex items-center px-3 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50"
+                >
+                  Use webcam (photo)
+                </button>
+              </div>
               {previewUrl && (
                 <div className="mt-4 rounded-xl border border-slate-200 p-4 bg-slate-50/50 relative">
                   <button
@@ -249,6 +327,15 @@ export default function AddReservationPage() {
                   )}
                 </div>
               )}
+              {showCamera === "photo" && (
+                <div className="mt-4 rounded-xl border border-slate-200 p-4 bg-slate-50/50">
+                  <Webcam ref={webcamRef} audio={false} screenshotFormat="image/jpeg" className="w-full rounded-lg" />
+                  <div className="mt-3 flex gap-3">
+                    <button type="button" onClick={capturePhoto} className="px-4 py-2 text-sm text-white bg-slate-800 rounded-lg hover:bg-slate-900">Capture</button>
+                    <button type="button" onClick={closeCamera} className="px-4 py-2 text-sm text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50">Close</button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* File Upload (video) */}
@@ -265,6 +352,15 @@ export default function AddReservationPage() {
                 key={videoInputKey}
                 className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm file:mr-4 file:rounded-lg file:border-0 file:bg-slate-50 file:px-4 file:py-2 file:text-slate-700 hover:border-slate-300 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-100 transition-all duration-200"
               />
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowCamera(showCamera === "video" ? null : "video")}
+                  className="inline-flex items-center px-3 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50"
+                >
+                  Use webcam (video)
+                </button>
+              </div>
               {videoPreviewUrl && (
                 <div className="mt-4 rounded-xl border border-slate-200 p-4 bg-slate-50/50 relative">
                   <button
@@ -282,6 +378,19 @@ export default function AddReservationPage() {
                       Preview file
                     </a>
                   )}
+                </div>
+              )}
+              {showCamera === "video" && (
+                <div className="mt-4 rounded-xl border border-slate-200 p-4 bg-slate-50/50">
+                  <Webcam ref={webcamRef} audio className="w-full rounded-lg" />
+                  <div className="mt-3 flex gap-3">
+                    {capturing ? (
+                      <button type="button" onClick={stopRecording} className="px-4 py-2 text-sm text-white bg-red-600 rounded-lg hover:bg-red-700">Stop</button>
+                    ) : (
+                      <button type="button" onClick={startRecording} className="px-4 py-2 text-sm text-white bg-slate-800 rounded-lg hover:bg-slate-900">Start</button>
+                    )}
+                    <button type="button" onClick={closeCamera} className="px-4 py-2 text-sm text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50">Close</button>
+                  </div>
                 </div>
               )}
             </div>

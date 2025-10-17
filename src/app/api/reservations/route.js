@@ -21,6 +21,7 @@ export async function POST(request) {
       name: form.get("name"),
       contact_no: form.get("contact_no") || "",
       comments: form.get("comments") || "",
+      location: form.get("location") || "",
       image_url: "",
       public_id: "",
       video_url: "",

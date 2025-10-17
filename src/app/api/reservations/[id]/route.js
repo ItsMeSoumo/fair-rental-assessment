@@ -40,6 +40,8 @@ export async function PUT(request, { params }) {
       update.name = form.get("name") || "";
       update.contact_no = form.get("contact_no") || "";
       update.comments = form.get("comments") || "";
+      const loc = form.get("location");
+      if (typeof loc === "string") update.location = loc;
 
       const image = form.get("image");
       if (image && typeof image.arrayBuffer === "function") {
@@ -66,6 +68,7 @@ export async function PUT(request, { params }) {
       if (Object.prototype.hasOwnProperty.call(body, "name")) update.name = body.name || "";
       if (Object.prototype.hasOwnProperty.call(body, "contact_no")) update.contact_no = body.contact_no || "";
       if (Object.prototype.hasOwnProperty.call(body, "comments")) update.comments = body.comments || "";
+      if (Object.prototype.hasOwnProperty.call(body, "location")) update.location = body.location || "";
     }
 
     const doc = await Reservation.findByIdAndUpdate(id, update, { new: true });
